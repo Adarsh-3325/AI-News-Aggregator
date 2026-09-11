@@ -1,0 +1,259 @@
+<div align="center">
+
+# ⚡ AI News Aggregator & Intelligence Feed
+### Autonomous Multi-Source News Curator, Anti-Hype LLM Summarizer & LangGraph RAG Agent
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-00E599?style=for-the-badge&logo=render&logoColor=white)](https://ai-news-aggregator-crw1.onrender.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
+[![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
+[![MongoDB Atlas](https://img.shields.io/badge/MongoDB_Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/atlas)
+[![Groq LPU](https://img.shields.io/badge/Groq_LPU-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agentic_RAG-blue?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
+
+<br/>
+
+**[Explore Live Demo](https://ai-news-aggregator-crw1.onrender.com)** • **[System Architecture](#-system-architecture)** • **[Features](#-key-features)** • **[Quickstart](#-local-development-setup)** • **[API Documentation](#-api-endpoints)**
+
+</div>
+
+---
+
+## 📖 Overview
+
+The **AI News Aggregator** is a production-ready, multi-tier intelligence platform designed to eliminate information overload, clickbait filler, and stale news. It automatically ingests, deduplicates, and distills high-density updates across multiple channels (Frontier AI, Geopolitics, Sports, Delhi-NCR Weather, Markets, Tech Startups) into concise technical takeaways and delivers personalized digests directly to user inboxes.
+
+### 🌟 Live Application
+🌐 **Hosted on Render:** [https://ai-news-aggregator-crw1.onrender.com](https://ai-news-aggregator-crw1.onrender.com)
+
+---
+
+## 🚀 Key Features
+
+* **⚡ Anti-Hype LLM Distillation:** Uses **Groq LPU inference** (LLaMA 3.3 / Qwen 2.5) with zero hallucination prompts to condense long-form articles into 3-bullet, insight-dense briefings.
+* **🧠 LangGraph StateGraph Hybrid RAG:** Conversational "Ask AI" assistant that combines **MongoDB Atlas Vector Search** (384-dim FastEmbed dense vectors) with automated **live web search fallback** (Google News RSS & Brave Search).
+* **📰 Inshorts/Flipboard-Style Dynamic Feed:** Sleek, responsive React 19 interface featuring real-time category filtering, read time estimates, and source provenance links.
+* **⏰ Timezone-Aware Automated Delivery:** Built-in `node-cron` engine allowing users to schedule daily or multi-interval email digests formatted in responsive HTML via Gmail SMTP.
+* **🛡️ Decoupled Two-Service Architecture:** Microservice split between a Node.js/Express API Gateway (Service A) and a Python FastAPI ML/Vector Engine (Service B) authenticated via internal HMAC secrets.
+* **💰 Zero Infrastructure Cost:** Designed to run 100% on free cloud tiers (Groq free tier, MongoDB Atlas M0, Render free tier, Open-Meteo, Brave Search).
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph ClientTier["🖥️ Frontend Tier (React 19 + Vite)"]
+        UI["React Dashboard & Chat Interface<br/>- Topics & Delivery Scheduler<br/>- Inshorts/Flipboard Curated Feed<br/>- Live Web Search Bar<br/>- 'Ask News' LangGraph RAG Assistant"]
+    end
+
+    subgraph ServiceA["🟢 Service A: API Gateway (Node.js/Express - Port 5000)"]
+        ExpRouter["Express REST API Router"]
+        MongooseModels["Mongoose User Model<br/>(MongoDB 'users' Collection)"]
+        NodeCron["Timezone-Aware node-cron Engine<br/>(Ticks every minute)"]
+        FastAPIProxy["Axios Client<br/>(Injects X-Internal-Secret)"]
+    end
+
+    subgraph ServiceB["🐍 Service B: Intelligence Engine (Python/FastAPI - Port 8000)"]
+        FastAPIAuth["verify_internal_secret Dependency<br/>(HTTP 401 Protection)"]
+        InternalRoutes["Protected Internal Endpoints<br/>- POST /internal/news-preview<br/>- POST /internal/run-pipeline<br/>- POST /internal/ask<br/>- POST /internal/search-live"]
+        
+        Scrapers["Keyless Scrapers<br/>- Google News RSS<br/>- YouTube Transcript Scraper<br/>- Open-Meteo Weather Scraper"]
+        
+        FastEmbed["FastEmbed Vectorizer<br/>(BAAI/bge-small-en-v1.5 - 384 dims)"]
+        
+        LangGraphAgent["LangGraph StateGraph RAG Agent<br/>1. Vector Retrieval Node<br/>2. Conditional Similarity Check (>=0.70)<br/>3. Live Search Node (Google/Brave)<br/>4. Grounded Synthesis Node (Groq LLM)"]
+        
+        SearchService["SearchService Fallback Engine<br/>(Google News RSS -> Brave API)"]
+        EmailService["Gmail SMTP Dispatcher"]
+    end
+
+    subgraph DatabaseTier["🗄️ Shared Persistence Layer (MongoDB Atlas Cluster)"]
+        AtlasUsers["Collection: 'users'<br/>(Email, Topics, Cron Schedule, Timezone, lastSentAt)"]
+        AtlasArticles["Collection: 'articles', 'digests', 'sent_logs'"]
+        AtlasVectors["Collection: 'article_embeddings'<br/>(Atlas Vector Search Index - 384 dims, Cosine)"]
+    end
+
+    ClientTier -->|REST API /api/*| ExpRouter
+    ExpRouter --> MongooseModels
+    MongooseModels --> AtlasUsers
+    NodeCron --> MongooseModels
+    NodeCron --> FastAPIProxy
+    ExpRouter --> FastAPIProxy
+
+    FastAPIProxy -->|HTTP + X-Internal-Secret| FastAPIAuth
+    FastAPIAuth --> InternalRoutes
+
+    InternalRoutes --> Scrapers
+    InternalRoutes --> EmailService
+    InternalRoutes --> LangGraphAgent
+    InternalRoutes --> SearchService
+
+    Scrapers --> AtlasArticles
+    AtlasArticles --> FastEmbed --> AtlasVectors
+    LangGraphAgent --> AtlasVectors
+    LangGraphAgent --> SearchService
+    LangGraphAgent --> GroqLLM["Groq LLM (LLaMA 3.3)"]
+```
+
+---
+
+## 🛠️ Tech Stack & Tooling
+
+| Domain | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | **React 19, Vite, Lucide Icons, Vanilla CSS** | Ultra-responsive, glassmorphic UI with zero layout shifts and instant tab switches. |
+| **API Gateway** | **Node.js 20, Express, Mongoose, node-cron** | User preference CRUD, rate limiting, and timezone-aware schedule ticking. |
+| **AI / ML Engine** | **Python 3.12, FastAPI, Uvicorn, Motor** | Vector embeddings, LangGraph stateful execution, async scrapers, and LLM inference. |
+| **Vector Store** | **MongoDB Atlas Vector Search** | Native 384-dimensional dense vector indexing and cosine similarity queries. |
+| **Embeddings** | **FastEmbed (`BAAI/bge-small-en-v1.5`)** | High-throughput, CPU-optimized local embeddings without external API costs. |
+| **LLM Inference** | **Groq Cloud (LLaMA 3.3 70B / Qwen 2.5)** | Sub-second anti-hype summarization and synthesis. |
+| **Deployment** | **Docker, Render, NGINX, GitHub Actions** | Multi-stage unified container deployment with automated health checks. |
+
+---
+
+## 📁 Repository Structure
+
+```
+AI-News-Aggregator/
+├── app/                          # Python FastAPI Intelligence Engine (Service B)
+│   ├── agent/                    # LangGraph StateGraph agent definitions
+│   ├── api/                      # Protected internal FastAPI routes & scheduler
+│   ├── database/                 # MongoDB Motor async client & repository
+│   ├── scrapers/                 # Decoupled RSS, YouTube, and Weather scrapers
+│   ├── services/                 # LLM, FastEmbed, Search, and Email services
+│   ├── config.py                 # Pydantic settings & environment validation
+│   └── server.py                 # FastAPI application factory & lifecycle
+├── backend-express/              # Node.js Express API Gateway (Service A)
+│   ├── config/                   # Mongoose MongoDB Atlas connection
+│   ├── models/                   # Mongoose User schema & schedule validation
+│   ├── routes/                   # Public REST endpoints (/api/users, /api/news, /api/ask)
+│   ├── services/                 # Timezone-aware node-cron scheduler & FastAPI proxy client
+│   └── server.js                 # Express server & static React SPA mounting
+├── frontend/                     # React 19 + Vite User Interface
+│   ├── src/                      # App.jsx, glassmorphic components, and CSS design system
+│   ├── public/                   # Static logos and assets
+│   └── vite.config.js            # Vite build configuration & local dev proxy
+├── Dockerfile                    # Multi-stage production container bundling all tiers
+├── start.sh                      # Unified process manager starting FastAPI + Express
+├── docker-compose.yml            # Multi-container orchestration (for AWS / VPS)
+├── render.yaml                   # Declarative Render Blueprint definition
+├── requirements.txt              # Production Python dependencies
+└── DEPLOYMENT_GUIDE.md           # Step-by-step AWS EC2 & Render deployment walkthrough
+```
+
+---
+
+## 💻 Local Development Setup
+
+### 1. Prerequisites
+- **Node.js** $\ge$ 20.x
+- **Python** $\ge$ 3.12
+- **MongoDB Atlas** cluster (or local MongoDB on `mongodb://localhost:27017`)
+- **Groq API Key** (Free at [console.groq.com](https://console.groq.com))
+
+---
+
+### 2. Environment Variables Configuration
+Copy the template file to `.env` in the root directory:
+```bash
+cp .env.production.example .env
+```
+
+Fill in your configuration:
+```env
+ENVIRONMENT=development
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/news_aggregator
+MONGODB_DB_NAME=news_aggregator
+GROQ_API_KEY=gsk_your_groq_api_key_here
+INTERNAL_API_SECRET=c8f5e29a4b7d16038e12f0c9751e3a649b802e5f1d7a3c9e624b80f1e5d7c3a9
+
+# Optional Gmail SMTP for email briefs
+EMAIL_USER=your_email@gmail.com
+EMAIL_APP_PASSWORD=your_16_char_app_password
+
+# Optional Live Search Fallback
+BRAVE_API_KEY=your_brave_search_api_key
+```
+
+---
+
+### 3. Run with Docker (Single Command)
+```bash
+docker compose up --build
+```
+Open [http://localhost](http://localhost) in your browser.
+
+---
+
+### 4. Run Manually (3 Separate Terminals)
+
+**Terminal 1 — Python FastAPI Engine (Service B):**
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.server:app --host 127.0.0.1 --port 8000 --reload
+```
+
+**Terminal 2 — Node.js Express Gateway (Service A):**
+```bash
+cd backend-express
+npm install
+npm run dev
+```
+
+**Terminal 3 — React Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+## 📡 API Endpoints
+
+### Public Endpoints (Express Gateway - Port 5000)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Gateway & MongoDB health verification. |
+| `POST` | `/api/users` | Register user email and initialize preferences. |
+| `GET` | `/api/users/:email` | Fetch user profile, selected topics, and cron schedule. |
+| `PUT` | `/api/users/:email/topics` | Update subscribed topic channels. |
+| `PUT` | `/api/users/:email/schedule` | Update delivery time, frequency, and timezone. |
+| `DELETE`| `/api/users/:email` | Permanently delete user profile and preferences. |
+| `POST` | `/api/news/preview` | Fetch live on-demand curated news feed for topics. |
+| `POST` | `/api/ask` | Query the LangGraph RAG Agent with live search fallback. |
+| `POST` | `/api/search/live` | Perform live keyword web search across news engines. |
+
+### Protected Internal Endpoints (FastAPI - Port 8000)
+*(Requires header: `X-Internal-Secret`)*
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/internal/news-preview` | Scraping, LLM summarization, and feed generation. |
+| `POST` | `/internal/ask` | LangGraph agent execution and grounded synthesis. |
+| `POST` | `/internal/search-live` | Multi-engine fallback web search execution. |
+| `POST` | `/internal/run-pipeline` | Full daily digest curation and Gmail SMTP dispatch. |
+
+---
+
+## 🚢 Deployment
+
+Detailed production deployment guides are available in [`DEPLOYMENT_GUIDE.md`](file:///DEPLOYMENT_GUIDE.md):
+- **[Render.com All-in-One Deployment](file:///DEPLOYMENT_GUIDE.md#method-2-rendercom-1-click-all-in-one-service-single-container)**
+- **[AWS EC2 Docker Compose Deployment](file:///DEPLOYMENT_GUIDE.md#method-1-aws-ec2-deployment-docker-compose)**
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
+
+<div align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/satsbee09">Satyam Singh</a></sub>
+</div>

@@ -1,0 +1,41 @@
+services:
+  # ==========================================================
+  # Unified All-in-One Service: React + Express + FastAPI
+  # Deploys the entire platform as a single Docker web service
+  # ==========================================================
+  - type: web
+    name: ai-news-aggregator
+    runtime: docker
+    dockerfilePath: Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: news_aggregator
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: INTERNAL_API_SECRET
+        generateValue: true
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_APP_PASSWORD
+        sync: false
+      - key: RECIPIENT_EMAIL
+        sync: false
+      - key: GOOGLE_CSE_API_KEY
+        sync: false
+      - key: GOOGLE_CSE_ID
+        sync: false
+      - key: BRAVE_API_KEY
+        sync: false

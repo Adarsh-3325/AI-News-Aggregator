@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+data/
+*.db
+# Node.js
+node_modules/
+backend-express/node_modules/
+frontend/node_modules/
+frontend/dist/
+backend-express/.env
+
+# Temporary scratch
+scratch/
