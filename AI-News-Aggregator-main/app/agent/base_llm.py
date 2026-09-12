@@ -11,12 +11,13 @@ class LLMClient:
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         # Active Groq models in order of capability & availability
         self.models: List[str] = [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768",
-            "gemma2-9b-it"
+            "openai/gpt-oss-20b",
+            "groq/compound-mini",
+            "qwen/qwen3.6-27b",
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-120b",
+            "groq/compound"
         ]
-
 
     def generate(self, system_prompt: str, user_prompt: str, json_mode: bool = False) -> str:
         """Calls Groq LLMs with automatic model fallback, token conservation, and robust JSON extraction."""
@@ -33,7 +34,7 @@ class LLMClient:
 
         for model_name in self.models:
             try:
-                # Use conservative max_tokens (350) to stay well under Groq free-tier rate limits (1000 OTPM)
+                # Use conservative max_tokens (250) to stay well under Groq free-tier rate limits (1000 OTPM)
                 response = self.client.chat.completions.create(
                     model=model_name,
                     messages=[
@@ -41,7 +42,7 @@ class LLMClient:
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=0.1,
-                    max_tokens=350
+                    max_tokens=250
                 )
                 raw_text = response.choices[0].message.content.strip()
 
