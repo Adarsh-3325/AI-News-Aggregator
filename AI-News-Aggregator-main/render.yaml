@@ -6,7 +6,7 @@ services:
   - type: web
     name: ai-news-aggregator
     runtime: docker
-    dockerfilePath: Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     region: oregon
     plan: free
