@@ -7,6 +7,7 @@ services:
     name: ai-news-aggregator
     runtime: docker
     dockerfilePath: Dockerfile
+    dockerContext: .
     region: oregon
     plan: free
     healthCheckPath: /api/health
