@@ -5,8 +5,8 @@ services:
   - type: web
     name: ai-news-aggregator
     runtime: python
-    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build
-    startCommand: ./start.sh
+    buildCommand: find . -name requirements.txt -exec pip install -r {} + && (cd frontend 2>/dev/null || cd */frontend 2>/dev/null) && npm install && npm run build
+    startCommand: (test -f start.sh && ./start.sh) || (test -f AI-News-Aggregator-main/start.sh && ./AI-News-Aggregator-main/start.sh) || uvicorn app.server:app --host 0.0.0.0 --port $PORT
     region: oregon
     plan: free
     healthCheckPath: /api/health
