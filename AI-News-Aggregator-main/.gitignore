@@ -20,3 +20,5 @@ backend-express/.env
 
 # Temporary scratch
 scratch/
+chroma_db/
+

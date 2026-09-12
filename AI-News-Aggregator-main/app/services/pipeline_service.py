@@ -1,8 +1,8 @@
 import time
 from datetime import datetime, timezone
 from typing import List
-from app.database.mongo import init_mongo_db
-from app.database.repository import MongoRepository
+from app.database.connection import init_db
+from app.database.repository import Repository, repository
 from app.scrapers.base import BaseScraper
 from app.scrapers.rss_scraper import RssScraper
 from app.scrapers.youtube_scraper import YouTubeScraper
@@ -16,7 +16,7 @@ from app.services.email_service import send_digest_email
 from app.profiles.user_profile import DEFAULT_USER_PROFILE
 
 def build_dynamic_scrapers(topics: List[dict]) -> List[BaseScraper]:
-    """Dynamically instantiates scrapers based on active topics in MongoDB."""
+    """Dynamically instantiates scrapers based on active topics in database."""
     scrapers: List[BaseScraper] = [
         RssScraper(),       # Static AI Research Feeds
         YouTubeScraper()    # Static AI YouTube Channels
@@ -61,9 +61,9 @@ def run_daily_pipeline(
 ) -> bool:
     """
     Orchestrates the entire universal multi-topic daily workflow:
-    1. Ensures MongoDB collections & indexes exist, seeds topics
-    2. Builds dynamic scrapers per active topic & persists to MongoDB
-    3. Runs LLM summarization on new articles
+    1. Ensures PostgreSQL/SQLite database tables exist, seeds topics
+    2. Builds dynamic scrapers per active topic & persists to database
+    3. Runs LLM summarization on new articles and updates ChromaDB vector store
     4. Ranks & curates top stories across topics per user weighting
     5. Delivers categorized HTML email newsletter & logs sent status
     """
@@ -72,13 +72,14 @@ def run_daily_pipeline(
     print(f"[START] UNIVERSAL NEWS INTELLIGENCE PIPELINE [{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}]")
     print("=" * 65)
 
-    # 1. Initialize MongoDB
-    init_mongo_db()
-    repo = MongoRepository()
+    # 1. Initialize Relational DB
+    init_db()
+    repo = repository
 
     # 2. Dynamic Scraper Construction
     active_topics = repo.get_active_topics()
     print(f"\n[STEP 1/4] Loaded {len(active_topics)} active user topics. Building dynamic scrapers...")
+
     dynamic_scrapers = build_dynamic_scrapers(active_topics)
     print(f"   Instantiated {len(dynamic_scrapers)} total active scrapers.")
 

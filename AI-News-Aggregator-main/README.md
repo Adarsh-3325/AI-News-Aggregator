@@ -1,20 +1,19 @@
 <div align="center">
 
-# ⚡ AI News Aggregator & Intelligence Feed
-### Autonomous Multi-Source News Curator, Anti-Hype LLM Summarizer & LangGraph RAG Agent
+# ⚡ AI News Intelligence & Agentic RAG Platform
+### Autonomous News Ingestion | Agentic RAG | Personalized Delivery (100% Python Architecture)
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-00E599?style=for-the-badge&logo=render&logoColor=white)](https://ai-news-aggregator-crw1.onrender.com)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
-[![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
-[![MongoDB Atlas](https://img.shields.io/badge/MongoDB_Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/atlas)
-[![Groq LPU](https://img.shields.io/badge/Groq_LPU-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-100%25_Python-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Agentic_RAG-blue?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_Store-7C3AED?style=for-the-badge)](https://www.trychroma.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Relational_DB-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![FastEmbed](https://img.shields.io/badge/FastEmbed-BAAI%2Fbge--small--en--v1.5-D97706?style=for-the-badge)](https://github.com/qdrant/fastembed)
+[![Groq LLM](https://img.shields.io/badge/Groq-LLaMA_3.3-F55036?style=for-the-badge)](https://groq.com)
+[![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
 
 <br/>
 
-**[Explore Live Demo](https://ai-news-aggregator-crw1.onrender.com)** • **[System Architecture](#-system-architecture)** • **[Features](#-key-features)** • **[Quickstart](#-local-development-setup)** • **[API Documentation](#-api-endpoints)**
+**[System Architecture Flow Diagram](#-software-architecture-flow-diagram)** • **[Core Workflow](#-agentic-rag-workflow)** • **[Features](#-key-features)** • **[Quickstart](#-local-development-setup)**
 
 </div>
 
@@ -22,238 +21,107 @@
 
 ## 📖 Overview
 
-The **AI News Aggregator** is a production-ready, multi-tier intelligence platform designed to eliminate information overload, clickbait filler, and stale news. It automatically ingests, deduplicates, and distills high-density updates across multiple channels (Frontier AI, Geopolitics, Sports, Delhi-NCR Weather, Markets, Tech Startups) into concise technical takeaways and delivers personalized digests directly to user inboxes.
+The **AI News Intelligence & Agentic RAG Platform** is a production-ready, 100% Python backend platform designed for autonomous multi-channel news ingestion, LLM anti-hype distillation, vector similarity search, and citation-backed question answering.
 
-### 🌟 Live Application
-🌐 **Hosted on Render:** [https://ai-news-aggregator-crw1.onrender.com](https://ai-news-aggregator-crw1.onrender.com)
-
----
-
-## 🚀 Key Features
-
-* **⚡ Anti-Hype LLM Distillation:** Uses **Groq LPU inference** (LLaMA 3.3 / Qwen 2.5) with zero hallucination prompts to condense long-form articles into 3-bullet, insight-dense briefings.
-* **🧠 LangGraph StateGraph Hybrid RAG:** Conversational "Ask AI" assistant that combines **MongoDB Atlas Vector Search** (384-dim FastEmbed dense vectors) with automated **live web search fallback** (Google News RSS & Brave Search).
-* **📰 Inshorts/Flipboard-Style Dynamic Feed:** Sleek, responsive React 19 interface featuring real-time category filtering, read time estimates, and source provenance links.
-* **⏰ Timezone-Aware Automated Delivery:** Built-in `node-cron` engine allowing users to schedule daily or multi-interval email digests formatted in responsive HTML via Gmail SMTP.
-* **🛡️ Decoupled Two-Service Architecture:** Microservice split between a Node.js/Express API Gateway (Service A) and a Python FastAPI ML/Vector Engine (Service B) authenticated via internal HMAC secrets.
-* **💰 Zero Infrastructure Cost:** Designed to run 100% on free cloud tiers (Groq free tier, MongoDB Atlas M0, Render free tier, Open-Meteo, Brave Search).
+> [!NOTE]
+> **No Express.js | No MongoDB | 100% Python Backend | Production Ready**
+>
+> All backend operations run natively on **FastAPI**, **LangChain**, **LangGraph**, **ChromaDB**, and **PostgreSQL** (with SQLite fallback).
 
 ---
 
-## 🏗️ System Architecture
+## 🎨 Software Architecture Flow Diagram
 
-```mermaid
-flowchart TD
-    subgraph ClientTier["🖥️ Frontend Tier (React 19 + Vite)"]
-        UI["React Dashboard & Chat Interface<br/>- Topics & Delivery Scheduler<br/>- Inshorts/Flipboard Curated Feed<br/>- Live Web Search Bar<br/>- 'Ask News' LangGraph RAG Assistant"]
-    end
-
-    subgraph ServiceA["🟢 Service A: API Gateway (Node.js/Express - Port 5000)"]
-        ExpRouter["Express REST API Router"]
-        MongooseModels["Mongoose User Model<br/>(MongoDB 'users' Collection)"]
-        NodeCron["Timezone-Aware node-cron Engine<br/>(Ticks every minute)"]
-        FastAPIProxy["Axios Client<br/>(Injects X-Internal-Secret)"]
-    end
-
-    subgraph ServiceB["🐍 Service B: Intelligence Engine (Python/FastAPI - Port 8000)"]
-        FastAPIAuth["verify_internal_secret Dependency<br/>(HTTP 401 Protection)"]
-        InternalRoutes["Protected Internal Endpoints<br/>- POST /internal/news-preview<br/>- POST /internal/run-pipeline<br/>- POST /internal/ask<br/>- POST /internal/search-live"]
-        
-        Scrapers["Keyless Scrapers<br/>- Google News RSS<br/>- YouTube Transcript Scraper<br/>- Open-Meteo Weather Scraper"]
-        
-        FastEmbed["FastEmbed Vectorizer<br/>(BAAI/bge-small-en-v1.5 - 384 dims)"]
-        
-        LangGraphAgent["LangGraph StateGraph RAG Agent<br/>1. Vector Retrieval Node<br/>2. Conditional Similarity Check (>=0.70)<br/>3. Live Search Node (Google/Brave)<br/>4. Grounded Synthesis Node (Groq LLM)"]
-        
-        SearchService["SearchService Fallback Engine<br/>(Google News RSS -> Brave API)"]
-        EmailService["Gmail SMTP Dispatcher"]
-    end
-
-    subgraph DatabaseTier["🗄️ Shared Persistence Layer (MongoDB Atlas Cluster)"]
-        AtlasUsers["Collection: 'users'<br/>(Email, Topics, Cron Schedule, Timezone, lastSentAt)"]
-        AtlasArticles["Collection: 'articles', 'digests', 'sent_logs'"]
-        AtlasVectors["Collection: 'article_embeddings'<br/>(Atlas Vector Search Index - 384 dims, Cosine)"]
-    end
-
-    ClientTier -->|REST API /api/*| ExpRouter
-    ExpRouter --> MongooseModels
-    MongooseModels --> AtlasUsers
-    NodeCron --> MongooseModels
-    NodeCron --> FastAPIProxy
-    ExpRouter --> FastAPIProxy
-
-    FastAPIProxy -->|HTTP + X-Internal-Secret| FastAPIAuth
-    FastAPIAuth --> InternalRoutes
-
-    InternalRoutes --> Scrapers
-    InternalRoutes --> EmailService
-    InternalRoutes --> LangGraphAgent
-    InternalRoutes --> SearchService
-
-    Scrapers --> AtlasArticles
-    AtlasArticles --> FastEmbed --> AtlasVectors
-    LangGraphAgent --> AtlasVectors
-    LangGraphAgent --> SearchService
-    LangGraphAgent --> GroqLLM["Groq LLM (LLaMA 3.3)"]
-```
+![AI News Intelligence & Agentic RAG Platform Architecture Diagram](architecture_diagram.svg)
 
 ---
 
-## 🛠️ Tech Stack & Tooling
+## 🚀 Core Architectural Highlights
 
-| Domain | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Frontend** | **React 19, Vite, Lucide Icons, Vanilla CSS** | Ultra-responsive, glassmorphic UI with zero layout shifts and instant tab switches. |
-| **API Gateway** | **Node.js 20, Express, Mongoose, node-cron** | User preference CRUD, rate limiting, and timezone-aware schedule ticking. |
-| **AI / ML Engine** | **Python 3.12, FastAPI, Uvicorn, Motor** | Vector embeddings, LangGraph stateful execution, async scrapers, and LLM inference. |
-| **Vector Store** | **MongoDB Atlas Vector Search** | Native 384-dimensional dense vector indexing and cosine similarity queries. |
-| **Embeddings** | **FastEmbed (`BAAI/bge-small-en-v1.5`)** | High-throughput, CPU-optimized local embeddings without external API costs. |
-| **LLM Inference** | **Groq Cloud (LLaMA 3.3 70B / Qwen 2.5)** | Sub-second anti-hype summarization and synthesis. |
-| **Deployment** | **Docker, Render, NGINX, GitHub Actions** | Multi-stage unified container deployment with automated health checks. |
+1. **1. Data Sources (Ingestion):**
+   - **Google News RSS**: Real-time articles across custom categories.
+   - **YouTube**: Automated video transcript scraping.
+   - **Open-Meteo**: Weather forecast updates.
+   - **Other Sources**: Tech, Markets, Startups, Geopolitics.
 
----
+2. **2. Ingestion Pipeline (ETL + Processing):**
+   - **Fetch & Parse**: Scrapers and RSS parsing.
+   - **Clean & Normalize**: Noise removal and URL deduplication.
+   - **Extract Metadata**: Titles, dates, categories, sources.
+   - **Generate Summary**: Anti-hype 3-bullet distillation via **Groq LLM**.
 
-## 📁 Repository Structure
+3. **3. Local Embedding Generation (FastEmbed):**
+   - Local CPU execution using `BAAI/bge-small-en-v1.5` ONNX model.
+   - Generates **384-dimensional dense vectors** with zero API cost.
 
-```
-AI-News-Aggregator/
-├── app/                          # Python FastAPI Intelligence Engine (Service B)
-│   ├── agent/                    # LangGraph StateGraph agent definitions
-│   ├── api/                      # Protected internal FastAPI routes & scheduler
-│   ├── database/                 # MongoDB Motor async client & repository
-│   ├── scrapers/                 # Decoupled RSS, YouTube, and Weather scrapers
-│   ├── services/                 # LLM, FastEmbed, Search, and Email services
-│   ├── config.py                 # Pydantic settings & environment validation
-│   └── server.py                 # FastAPI application factory & lifecycle
-├── backend-express/              # Node.js Express API Gateway (Service A)
-│   ├── config/                   # Mongoose MongoDB Atlas connection
-│   ├── models/                   # Mongoose User schema & schedule validation
-│   ├── routes/                   # Public REST endpoints (/api/users, /api/news, /api/ask)
-│   ├── services/                 # Timezone-aware node-cron scheduler & FastAPI proxy client
-│   └── server.js                 # Express server & static React SPA mounting
-├── frontend/                     # React 19 + Vite User Interface
-│   ├── src/                      # App.jsx, glassmorphic components, and CSS design system
-│   ├── public/                   # Static logos and assets
-│   └── vite.config.js            # Vite build configuration & local dev proxy
-├── Dockerfile                    # Multi-stage production container bundling all tiers
-├── start.sh                      # Unified process manager starting FastAPI + Express
-├── docker-compose.yml            # Multi-container orchestration (for AWS / VPS)
-├── render.yaml                   # Declarative Render Blueprint definition
-├── requirements.txt              # Production Python dependencies
-└── DEPLOYMENT_GUIDE.md           # Step-by-step AWS EC2 & Render deployment walkthrough
-```
+4. **4. Dual Storage Layer:**
+   - **PostgreSQL**: Relational schema for Users, Preferences, Articles, Digests, Sent Logs, and Agent Run History via SQLAlchemy.
+   - **ChromaDB**: Local, persistent vector store for article embeddings and cosine similarity search.
+
+5. **5. LangGraph Agent (Agentic RAG Centerpiece):**
+   - **6-Stage StateGraph Workflow**:
+     1. *Query Analysis & Routing*: Analyzes user query and selects tool pipeline.
+     2. *Retrieval*: Performs ChromaDB vector similarity search.
+     3. *Relevance Check*: Evaluates similarity threshold (>= 0.50).
+     4. *Live Research (Conditional Fallback)*: Calls Brave / Google Search APIs if vector score is weak.
+     5. *Evidence Verification*: Validates, deduplicates, and filters sources.
+     6. *Synthesis*: Generates grounded answer with explicit inline citations via **Groq LLM**.
+   - **Connected Tools**: Vector Search Tool, Live Web Search Tool, News Retrieval Tool, YouTube Transcript Tool, Weather Tool, Utility Tools.
+
+6. **6. Scheduled News Digest (APScheduler):**
+   - Automated background jobs in Python via `APScheduler`.
+   - Personalized topic weighting and Gmail SMTP delivery.
+
+7. **7. FastAPI Backend & React Frontend:**
+   - **FastAPI**: 100% Python REST API handling users, digests, search, and agent execution.
+   - **React + Vite**: Interactive frontend with News Feed, Ask AI Chat, and Topic Preference controls.
 
 ---
 
 ## 💻 Local Development Setup
 
 ### 1. Prerequisites
-- **Node.js** $\ge$ 20.x
-- **Python** $\ge$ 3.12
-- **MongoDB Atlas** cluster (or local MongoDB on `mongodb://localhost:27017`)
+- **Python** $\ge$ 3.10
+- **Node.js** $\ge$ 18.x
 - **Groq API Key** (Free at [console.groq.com](https://console.groq.com))
 
 ---
 
 ### 2. Environment Variables Configuration
-Copy the template file to `.env` in the root directory:
+Copy `.env.example` to `.env`:
 ```bash
-cp .env.production.example .env
+cp .env.example .env
 ```
 
-Fill in your configuration:
+Configure settings:
 ```env
 ENVIRONMENT=development
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/news_aggregator
-MONGODB_DB_NAME=news_aggregator
+DATABASE_URL=sqlite:///./news_aggregator.db
+CHROMA_PERSIST_DIR=./chroma_db
 GROQ_API_KEY=gsk_your_groq_api_key_here
-INTERNAL_API_SECRET=c8f5e29a4b7d16038e12f0c9751e3a649b802e5f1d7a3c9e624b80f1e5d7c3a9
-
-# Optional Gmail SMTP for email briefs
-EMAIL_USER=your_email@gmail.com
-EMAIL_APP_PASSWORD=your_16_char_app_password
-
-# Optional Live Search Fallback
-BRAVE_API_KEY=your_brave_search_api_key
 ```
 
 ---
 
-### 3. Run with Docker (Single Command)
+### 3. Run FastAPI Backend (Port 8000)
 ```bash
-docker compose up --build
-```
-Open [http://localhost](http://localhost) in your browser.
-
----
-
-### 4. Run Manually (3 Separate Terminals)
-
-**Terminal 1 — Python FastAPI Engine (Service B):**
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.server:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-**Terminal 2 — Node.js Express Gateway (Service A):**
-```bash
-cd backend-express
-npm install
-npm run dev
-```
+---
 
-**Terminal 3 — React Frontend:**
+### 4. Run React Frontend (Port 5173)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
 
----
-
-## 📡 API Endpoints
-
-### Public Endpoints (Express Gateway - Port 5000)
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Gateway & MongoDB health verification. |
-| `POST` | `/api/users` | Register user email and initialize preferences. |
-| `GET` | `/api/users/:email` | Fetch user profile, selected topics, and cron schedule. |
-| `PUT` | `/api/users/:email/topics` | Update subscribed topic channels. |
-| `PUT` | `/api/users/:email/schedule` | Update delivery time, frequency, and timezone. |
-| `DELETE`| `/api/users/:email` | Permanently delete user profile and preferences. |
-| `POST` | `/api/news/preview` | Fetch live on-demand curated news feed for topics. |
-| `POST` | `/api/ask` | Query the LangGraph RAG Agent with live search fallback. |
-| `POST` | `/api/search/live` | Perform live keyword web search across news engines. |
-
-### Protected Internal Endpoints (FastAPI - Port 8000)
-*(Requires header: `X-Internal-Secret`)*
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/internal/news-preview` | Scraping, LLM summarization, and feed generation. |
-| `POST` | `/internal/ask` | LangGraph agent execution and grounded synthesis. |
-| `POST` | `/internal/search-live` | Multi-engine fallback web search execution. |
-| `POST` | `/internal/run-pipeline` | Full daily digest curation and Gmail SMTP dispatch. |
-
----
-
-## 🚢 Deployment
-
-Detailed production deployment guides are available in [`DEPLOYMENT_GUIDE.md`](file:///DEPLOYMENT_GUIDE.md):
-- **[Render.com All-in-One Deployment](file:///DEPLOYMENT_GUIDE.md#method-2-rendercom-1-click-all-in-one-service-single-container)**
-- **[AWS EC2 Docker Compose Deployment](file:///DEPLOYMENT_GUIDE.md#method-1-aws-ec2-deployment-docker-compose)**
+Open [http://localhost:5173](http://localhost:5173) to interact with the platform.
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
-<div align="center">
-  <sub>Built with ❤️ by <a href="https://github.com/satsbee09">Satyam Singh</a></sub>
-</div>
+Distributed under the **MIT License**.

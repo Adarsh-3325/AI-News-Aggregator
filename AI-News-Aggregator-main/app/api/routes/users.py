@@ -1,142 +1,88 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, status
-from app.api.database import get_users_collection
+from fastapi import APIRouter, HTTPException, status, Depends
+from app.database.repository import Repository, repository
 from app.api.schemas import (
     UserCreateRequest,
     UserTopicsUpdateRequest,
     UserResponse,
-    TopicItem,
     ScheduleSettings
 )
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
+def _format_user_response(user) -> UserResponse:
+    user_topics = []
+    if hasattr(user, "topics") and user.topics:
+        for t in user.topics:
+            user_topics.append({
+                "name": t.topic_name,
+                "scope": t.scope,
+                "category": t.category
+            })
+    return UserResponse(
+        email=user.email,
+        is_subscribed=user.is_subscribed,
+        topics=user_topics,
+        schedule=ScheduleSettings(
+            time=user.schedule_time or "23:00",
+            frequency=user.schedule_freq or "daily",
+            timezone=user.schedule_tz or "Asia/Kolkata",
+            enabled=user.is_subscribed
+        ),
+        created_at=user.created_at
+    )
+
 @router.post("", response_model=UserResponse, status_code=status.HTTP_200_OK)
 async def create_or_get_user(payload: UserCreateRequest):
-    """Creates a new user or returns existing user by email (upsert)."""
-    users_col = get_users_collection()
+    """Creates a new user or returns existing user by email."""
     email = payload.email.lower().strip()
-    
-    existing = await users_col.find_one({"email": email})
-    now = datetime.now(timezone.utc)
-    
-    if existing:
-        return UserResponse(
-            email=existing["email"],
-            is_subscribed=existing.get("isSubscribed", existing.get("schedule", {}).get("enabled", True)),
-            topics=existing.get("topics", []),
-            schedule=existing.get("schedule", ScheduleSettings().model_dump()),
-            created_at=existing.get("created_at"),
-            updated_at=existing.get("updated_at")
-        )
-    
-    # Default initial topics
-    default_topics = [
-        {"name": "Frontier AI & LLMs", "scope": "ai", "category": "ai"},
-        {"name": "Local News", "scope": "local", "category": "local"},
-        {"name": "National Politics", "scope": "national", "category": "national"},
-        {"name": "Cricket & Sports", "scope": "sports", "category": "sports"}
-    ]
-    
-    new_user_doc = {
-        "email": email,
-        "isSubscribed": True,
-        "topics": default_topics,
-        "schedule": ScheduleSettings().model_dump(),
-        "created_at": now,
-        "updated_at": now
-    }
-    
-    await users_col.insert_one(new_user_doc)
-    return UserResponse(
-        email=email,
-        is_subscribed=True,
-        topics=[TopicItem(**t) for t in default_topics],
-        schedule=ScheduleSettings(),
-        created_at=now,
-        updated_at=now
-    )
+    user = repository.create_or_get_user(email=email, full_name=payload.full_name)
+    return _format_user_response(user)
 
 @router.get("/{email}", response_model=UserResponse)
 async def get_user_profile(email: str):
     """Fetches user profile, selected topics, and schedule settings."""
-    users_col = get_users_collection()
     email_clean = email.lower().strip()
-    
-    user = await users_col.find_one({"email": email_clean})
+    user = repository.get_user_by_email(email_clean)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with email '{email_clean}' not found."
-        )
-    
-    return UserResponse(
-        email=user["email"],
-        is_subscribed=user.get("isSubscribed", user.get("schedule", {}).get("enabled", True)),
-        topics=user.get("topics", []),
-        schedule=user.get("schedule", ScheduleSettings().model_dump()),
-        created_at=user.get("created_at"),
-        updated_at=user.get("updated_at")
-    )
+        # Auto-create if first visit
+        user = repository.create_or_get_user(email_clean)
+    return _format_user_response(user)
 
 @router.put("/{email}/topics", response_model=UserResponse)
-async def update_user_topics(email: str, payload: UserTopicsUpdateRequest):
-    """Updates user's selected topics (predefined + custom). Requires at least 1 topic."""
+async def update_user_topics_put(email: str, payload: UserTopicsUpdateRequest):
+    """Updates user's selected topics."""
     if not payload.topics:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="At least one topic must be selected."
         )
     
-    users_col = get_users_collection()
     email_clean = email.lower().strip()
-    
-    # Normalize topics: default scope to 'general' if missing, set category accordingly
-    clean_topics = []
-    for t in payload.topics:
-        topic_dict = t.model_dump()
-        if not topic_dict.get("scope"):
-            topic_dict["scope"] = "general"
-        if not topic_dict.get("category"):
-            topic_dict["category"] = topic_dict["scope"]
-        clean_topics.append(topic_dict)
-    
-    now = datetime.now(timezone.utc)
-    res = await users_col.find_one_and_update(
-        {"email": email_clean},
-        {"$set": {"topics": clean_topics, "updated_at": now}},
-        return_document=True
-    )
-    
-    if not res:
-        # Create user if doesn't exist
-        new_doc = {
-            "email": email_clean,
-            "topics": clean_topics,
-            "schedule": ScheduleSettings().model_dump(),
-            "created_at": now,
-            "updated_at": now
-        }
-        await users_col.insert_one(new_doc)
-        res = new_doc
-        
-    return UserResponse(
-        email=res["email"],
-        is_subscribed=res.get("isSubscribed", res.get("schedule", {}).get("enabled", True)),
-        topics=res.get("topics", []),
-        schedule=res.get("schedule", ScheduleSettings().model_dump()),
-        created_at=res.get("created_at"),
-        updated_at=res.get("updated_at")
-    )
+    topic_names = []
+    for item in payload.topics:
+        if isinstance(item, str):
+            topic_names.append(item)
+        elif isinstance(item, dict) and "name" in item:
+            topic_names.append(item["name"])
+        elif hasattr(item, "name"):
+            topic_names.append(getattr(item, "name"))
+            
+    repository.update_user_topics(email=email_clean, topic_names=topic_names)
+    user = repository.get_user_by_email(email_clean)
+    return _format_user_response(user)
+
+@router.post("/{email}/topics", response_model=UserResponse)
+async def update_user_topics_post(email: str, payload: UserTopicsUpdateRequest):
+    """POST endpoint for updating user topics (alias for PUT)."""
+    return await update_user_topics_put(email, payload)
 
 @router.delete("/{email}", status_code=status.HTTP_200_OK)
 async def delete_user_account(email: str):
-    """Permanently deletes user account, preferences, and schedules from database."""
-    users_col = get_users_collection()
+    """Permanently deletes user account and preferences."""
     email_clean = email.lower().strip()
-    
-    result = await users_col.delete_one({"email": email_clean})
-    if result.deleted_count == 0:
+    success = repository.delete_user(email_clean)
+    if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with email '{email_clean}' not found."

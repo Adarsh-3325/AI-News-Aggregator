@@ -11,11 +11,12 @@ class LLMClient:
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         # Active Groq models in order of capability & availability
         self.models: List[str] = [
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
-            "qwen/qwen3.8-27b",
-            "qwen/qwen3.6-27b"
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+            "gemma2-9b-it"
         ]
+
 
     def generate(self, system_prompt: str, user_prompt: str, json_mode: bool = False) -> str:
         """Calls Groq LLMs with automatic model fallback, token conservation, and robust JSON extraction."""

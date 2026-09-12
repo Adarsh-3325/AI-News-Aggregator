@@ -3,34 +3,36 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.api.database import connect_to_mongo, close_mongo_connection, get_motor_db
+from app.database.connection import init_db
+from app.database.chroma import chroma_store
 from app.api.scheduler import scheduler, init_scheduler_jobs
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Connect to MongoDB via Motor
-    await connect_to_mongo()
+    # Startup: Initialize relational database tables (PostgreSQL/SQLite) & ChromaDB
+    init_db()
+    print("[SERVER] Relational database & ChromaDB vector store initialized successfully.")
     
-    # Start APScheduler & load jobs
+    # Start APScheduler & load user jobs
     scheduler.start()
     await init_scheduler_jobs()
-    print("[SERVER] APScheduler started successfully.")
+    print("[SERVER] APScheduler background engine started.")
     
     yield
     
-    # Shutdown: Stop scheduler & close MongoDB
+    # Shutdown: Stop scheduler
     if scheduler.running:
         scheduler.shutdown()
-        print("[SERVER] APScheduler shut down.")
-    await close_mongo_connection()
+        print("[SERVER] APScheduler shut down cleanly.")
 
 app = FastAPI(
-    title="Universal News Aggregator API",
-    version="1.0.0",
+    title="AI News Intelligence & Agentic RAG Platform",
+    description="100% Python Backend powered by FastAPI, LangChain, LangGraph, ChromaDB, PostgreSQL & Groq LLM",
+    version="2.0.0",
     lifespan=lifespan
 )
 
-# Enable CORS for React dev server
+# Enable CORS for React frontend (Vite)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -49,20 +51,20 @@ app.include_router(news_router)
 app.include_router(schedule_router)
 app.include_router(internal_router)
 
-
 @app.get("/api/health")
 async def health_check():
-    """Health check route to verify FastAPI and MongoDB connectivity."""
-    db = get_motor_db()
-    pong = await db.command("ping")
+    """Health check route verifying FastAPI, ChromaDB, and APScheduler status."""
+    chroma_count = chroma_store.collection.count() if hasattr(chroma_store, "collection") else 0
     return {
         "status": "healthy",
-        "mongodb": "connected" if pong.get("ok") == 1.0 else "disconnected",
+        "database": "PostgreSQL / SQLite",
+        "vector_store": "ChromaDB (Local Persistent)",
+        "vector_count": chroma_count,
         "scheduler": "running" if scheduler.running else "stopped",
-        "service": "Universal News Aggregator API"
+        "service": "100% Python AI News Intelligence & Agentic RAG Platform"
     }
 
-# Serve React static build if built
+# Serve React static production build if compiled
 dist_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
 if os.path.exists(dist_dir):
     app.mount("/", StaticFiles(directory=dist_dir, html=True), name="static_frontend")

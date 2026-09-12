@@ -3,7 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from app.api.schemas import ScheduleSettings
-from app.api.database import get_users_collection
+from app.database.repository import repository
 from app.api.services.user_pipeline import run_user_pipeline
 
 scheduler = AsyncIOScheduler(timezone=pytz.utc)
@@ -28,15 +28,14 @@ def schedule_user_job(email: str, schedule: ScheduleSettings):
 
     # Parse HH:MM
     time_parts = schedule.time.split(":")
-    hour = int(time_parts[0]) if len(time_parts) > 0 and time_parts[0].isdigit() else 7
-    minute = int(time_parts[1]) if len(time_parts) > 1 and time_parts[1].isdigit() else 30
+    hour = int(time_parts[0]) if len(time_parts) > 0 and time_parts[0].isdigit() else 23
+    minute = int(time_parts[1]) if len(time_parts) > 1 and time_parts[1].isdigit() else 0
 
     if schedule.frequency == "every_6_hours":
         trigger = IntervalTrigger(hours=6, timezone=user_tz)
     elif schedule.frequency == "every_12_hours":
         trigger = IntervalTrigger(hours=12, timezone=user_tz)
     else:
-        # Default: Daily at specified hour:minute
         trigger = CronTrigger(hour=hour, minute=minute, timezone=user_tz)
 
     scheduler.add_job(
@@ -50,21 +49,26 @@ def schedule_user_job(email: str, schedule: ScheduleSettings):
     print(f"[SCHEDULER] Scheduled job '{job_id}' ({schedule.frequency} at {hour:02d}:{minute:02d} {tz_str})")
 
 async def init_scheduler_jobs():
-    """Loads all saved user schedules from MongoDB and populates APScheduler jobs on startup."""
+    """Loads saved user schedules from database and populates APScheduler jobs on startup."""
     try:
-        users_col = get_users_collection()
-        cursor = users_col.find({"schedule": {"$exists": True}})
-        users = await cursor.to_list(length=1000)
+        db = repository._get_session()
+        from app.database.models import User
+        from sqlalchemy import select
+        users = list(db.scalars(select(User).where(User.is_subscribed == True)).all())
+        db.close()
         
         count = 0
         for u in users:
-            email = u.get("email")
-            sched_dict = u.get("schedule", {})
-            if email and sched_dict:
-                settings_obj = ScheduleSettings(**sched_dict)
-                schedule_user_job(email, settings_obj)
+            if u.email:
+                settings_obj = ScheduleSettings(
+                    time=u.schedule_time or "23:00",
+                    frequency=u.schedule_freq or "daily",
+                    timezone=u.schedule_tz or "Asia/Kolkata",
+                    enabled=u.is_subscribed
+                )
+                schedule_user_job(u.email, settings_obj)
                 count += 1
                 
-        print(f"[SCHEDULER] Loaded and registered {count} user job(s) from database.")
+        print(f"[SCHEDULER] Loaded and registered {count} user job(s) from relational database.")
     except Exception as e:
         print(f"[SCHEDULER INIT ERROR] Could not load user jobs: {e}")

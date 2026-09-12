@@ -1,8 +1,6 @@
 import asyncio
-from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
-from app.api.database import get_users_collection
-from app.database.repository import MongoRepository
+from app.database.repository import Repository, repository
 from app.scrapers.base import BaseScraper
 from app.scrapers.google_news_scraper import GoogleNewsScraper
 from app.scrapers.weather_scraper import WeatherScraper
@@ -17,7 +15,7 @@ def build_scrapers_for_user_topics(topics: List[Dict[str, Any]]) -> List[BaseScr
     """Constructs dynamic scrapers specifically for a user's chosen topics."""
     scrapers: List[BaseScraper] = []
     
-    # Always include tech/AI scrapers if user selected AI
+    # Include AI scrapers if user selected AI
     has_ai = any(t.get("scope") == "ai" or "ai" in t.get("name", "").lower() for t in topics)
     if has_ai:
         scrapers.append(RssScraper())
@@ -35,7 +33,6 @@ def build_scrapers_for_user_topics(topics: List[Dict[str, Any]]) -> List[BaseScr
             city = name.replace("Weather", "").replace("weather", "").replace("NCR", "").replace("ncr", "").strip() or "Delhi"
             scrapers.append(WeatherScraper(city_name=city, topic_name=name))
         elif scope == "ai" and name in ["Frontier AI & LLMs", "AI"]:
-            # Handled by static RSS & YouTube scrapers above
             continue
         else:
             scrapers.append(GoogleNewsScraper(query=name, topic_name=name, category=category))
@@ -48,20 +45,17 @@ async def run_user_pipeline(email: str, topics: Optional[List[Dict[str, Any]]] =
     print(f"[PIPELINE TRIGGER] Running personalized pipeline for: {email}")
     print(f"=================================================================")
     
+    clean_email = email.lower().strip()
+    repo = repository
+
     if not topics:
-        try:
-            users_col = get_users_collection()
-            user_doc = await users_col.find_one({"email": email.lower().strip()})
-            if user_doc:
-                topics = user_doc.get("topics", [])
-        except Exception as e:
-            print(f"[WARN] Error fetching user doc: {e}")
+        user = repo.get_user_by_email(clean_email)
+        if user and user.topics:
+            topics = [{"name": t.topic_name, "scope": t.scope, "category": t.category} for t in user.topics if t.active]
         
     if not topics:
-        print(f"[WARN] User '{email}' has no selected topics.")
-        return {"status": "error", "message": "No topics configured for user."}
-
-    repo = MongoRepository()
+        active_t = repo.get_active_topics()
+        topics = [{"name": t["topic_name"], "scope": t["scope"], "category": t["category"]} for t in active_t]
     
     # Step 1: Ingestion
     scrapers = build_scrapers_for_user_topics(topics)
@@ -108,27 +102,26 @@ async def run_user_pipeline(email: str, topics: Optional[List[Dict[str, Any]]] =
         return {"status": "success", "message": "No new unsent content to email."}
 
     custom_profile = UserProfile(
-        name=email.split("@")[0].capitalize(),
+        name=clean_email.split("@")[0].capitalize(),
         primary_interests=[t.get("name", "") for t in topics],
         max_daily_articles=5
     )
-
 
     curator = CuratorAgent()
     ranked = curator.rank_digests(unsent_digests, profile=custom_profile)
     top_stories = ranked[:custom_profile.max_daily_articles]
 
     # Step 4: Dispatch Email
-    print(f"Step 4: Dispatching categorized email to {email}...")
+    print(f"Step 4: Dispatching categorized email to {clean_email}...")
     def _send_email():
-        return send_digest_email(ranked_items=top_stories, repo=repo, recipient=email, dry_run=dry_run)
+        return send_digest_email(ranked_items=top_stories, repo=repo, recipient=clean_email, dry_run=dry_run)
 
     success = await loop.run_in_executor(None, _send_email)
     print(f"[RESULT] User pipeline completed. Email sent: {success}")
     
     return {
         "status": "success" if success else "failed",
-        "email": email,
+        "email": clean_email,
         "articles_saved": saved_count,
         "digests_generated": processed_count,
         "stories_curated": len(top_stories),

@@ -140,18 +140,20 @@ def build_email_html(ranked_items: List[Tuple[Dict[str, Any], float, str]], prof
     return full_html
 
 
+from app.database.repository import Repository, repository
+
 def send_digest_email(
     ranked_items: List[Tuple[Dict[str, Any], float, str]],
-    repo: Optional[MongoRepository] = None,
+    repo: Optional[Repository] = None,
     recipient: str = "",
     dry_run: bool = False
 ) -> bool:
-    """Builds and delivers the categorized email digest via Gmail SMTP, logging sent IDs to MongoDB."""
+    """Builds and delivers the categorized email digest via Gmail SMTP, logging sent IDs to relational database."""
     if not ranked_items:
         print("   [INFO] No articles to send in email.")
         return False
 
-    repo = repo or MongoRepository()
+    repo = repo or repository
     recipient = recipient or settings.RECIPIENT_EMAIL or settings.EMAIL_USER
     html_content = build_email_html(ranked_items)
 
@@ -172,7 +174,9 @@ def send_digest_email(
             print("   [INFO] Dry-run enabled. Skipping SMTP dispatch.")
         
         for digest, _, _ in ranked_items:
-            repo.log_sent_digest(digest["_id"], recipient=recipient or "dry_run_user@local")
+            d_id = getattr(digest, "id", None) or (digest.get("id") if isinstance(digest, dict) else digest.get("_id"))
+            if d_id:
+                repo.log_sent_digest(d_id, recipient=recipient or "dry_run_user@local")
         return True
 
     # 2. Dispatch via Gmail SMTP
@@ -190,18 +194,23 @@ def send_digest_email(
 
     try:
         print(f"   Connecting to SMTP server ({settings.EMAIL_HOST}:{settings.EMAIL_PORT})...")
-        with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
+        with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT, timeout=10) as server:
             server.starttls()
-            server.login(settings.EMAIL_USER, settings.EMAIL_APP_PASSWORD)
+            app_pass = settings.EMAIL_APP_PASSWORD.replace(" ", "")
+            server.login(settings.EMAIL_USER, app_pass)
             server.send_message(msg)
 
         print(f"   [SUCCESS] Email successfully delivered to {recipient}!")
 
-        # 3. Log sent digests in MongoDB to prevent re-sending
+
+        # 3. Log sent digests in database to prevent re-sending
         for digest, _, _ in ranked_items:
-            repo.log_sent_digest(digest["_id"], recipient=recipient)
+            d_id = getattr(digest, "id", None) or (digest.get("id") if isinstance(digest, dict) else digest.get("_id"))
+            if d_id:
+                repo.log_sent_digest(d_id, recipient=recipient)
 
         return True
     except Exception as e:
         print(f"   [ERROR] Failed to send email via SMTP: {e}")
         return False
+

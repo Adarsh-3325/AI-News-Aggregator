@@ -1,45 +1,36 @@
-from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status
-from app.api.database import get_users_collection
+from app.database.repository import repository
 from app.api.schemas import ScheduleSettings, UserResponse
 from app.api.scheduler import schedule_user_job
-from app.api.services.user_pipeline import run_user_pipeline
+from app.api.routes.users import _format_user_response
 
 router = APIRouter(prefix="/api/users", tags=["Schedule"])
 
 @router.put("/{email}/schedule", response_model=UserResponse)
-async def update_user_schedule(email: str, payload: ScheduleSettings):
-    """Updates user's delivery schedule settings and registers/reschedules their APScheduler job."""
-    users_col = get_users_collection()
+async def update_user_schedule_put(email: str, payload: ScheduleSettings):
+    """Updates user's delivery schedule settings and registers APScheduler job."""
     email_clean = email.lower().strip()
-    
-    now = datetime.now(timezone.utc)
-    res = await users_col.find_one_and_update(
-        {"email": email_clean},
-        {"$set": {"schedule": payload.model_dump(), "updated_at": now}},
-        return_document=True
+    user = repository.update_user_schedule(
+        email=email_clean,
+        schedule_time=payload.time,
+        schedule_freq=payload.frequency,
+        schedule_tz=payload.timezone,
+        is_subscribed=payload.enabled
     )
     
-    if not res:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with email '{email_clean}' not found. Please create user first."
-        )
-        
-    # Register/Reschedule APScheduler job
+    # Register/Reschedule APScheduler background job
     schedule_user_job(email_clean, payload)
-    
-    return UserResponse(
-        email=res["email"],
-        topics=res.get("topics", []),
-        schedule=res.get("schedule", ScheduleSettings().model_dump()),
-        created_at=res.get("created_at"),
-        updated_at=res.get("updated_at")
-    )
+    return _format_user_response(user)
+
+@router.post("/{email}/schedule", response_model=UserResponse)
+async def update_user_schedule_post(email: str, payload: ScheduleSettings):
+    """POST alias for updating user's delivery schedule."""
+    return await update_user_schedule_put(email, payload)
 
 @router.post("/{email}/trigger")
 async def trigger_user_digest_now(email: str, dry_run: bool = False):
     """Manually triggers the personalized digest pipeline for a user immediately."""
     email_clean = email.lower().strip()
-    result = await run_user_pipeline(email=email_clean, dry_run=dry_run)
-    return result
+    from app.services.pipeline_service import run_daily_pipeline
+    success = run_daily_pipeline(dry_run=dry_run)
+    return {"status": "completed" if success else "failed", "email": email_clean, "dry_run": dry_run}
