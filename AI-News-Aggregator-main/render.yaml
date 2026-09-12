@@ -5,8 +5,8 @@ services:
   - type: web
     name: ai-news-aggregator
     runtime: python
-    buildCommand: pip install -r requirements.txt && (cd frontend 2>/dev/null || cd AI-News-Aggregator-main/frontend 2>/dev/null) && npm install && npm run build
-    startCommand: (test -f start.sh && ./start.sh) || (test -f AI-News-Aggregator-main/start.sh && ./AI-News-Aggregator-main/start.sh) || uvicorn app.server:app --host 0.0.0.0 --port $PORT
+    buildCommand: python -c "import os; [os.chdir(r) for r, d, f in os.walk('.') if 'requirements.txt' in f and 'node_modules' not in r]; print('Found requirements.txt in:', os.getcwd()); os.system('pip install -r requirements.txt')" && (cd frontend 2>/dev/null || cd AI-News-Aggregator-main/frontend 2>/dev/null || cd */frontend 2>/dev/null) && npm install && npm run build
+    startCommand: python -c "import os; [os.chdir(r) for r, d, f in os.walk('.') if 'start.sh' in f and 'node_modules' not in r]; os.system('./start.sh')" || uvicorn app.server:app --host 0.0.0.0 --port $PORT
     region: oregon
     plan: free
     healthCheckPath: /api/health
